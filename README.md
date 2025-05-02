@@ -17,7 +17,7 @@ Our goals are:
 - Inform possible US fisheries solutions to changes in pollock catch per year
 
 Previous work has shown this approach is feasible, though the exploratory model could use some refinement. Below is a predicted pollock catch per unit effort (kg of pollock / ha trawled) map for 2040 under CMIP6's SSP3.70 model. The model was trained off of benthic ocean temperature, mean percent sea ice cover, benthic dissolved oxygen and depth. 
-![Predicted Pollock CPUE map for Eastern Bering Sea in 2040 (CMIP6 SSP3-7.0)](ExploratoryMapPollockCPUE2040.png "Predicted Pollock CPUE map for Eastern Bering Sea in 2040 (CMIP6 SSP3-7.0")
+![Predicted Pollock CPUE map for Eastern Bering Sea in 2040 (CMIP6 SSP3-7.0)](Previous_R_model/ExploratoryMapPollockCPUE2040.png "Predicted Pollock CPUE map for Eastern Bering Sea in 2040 (CMIP6 SSP3-7.0")
 
 
 
