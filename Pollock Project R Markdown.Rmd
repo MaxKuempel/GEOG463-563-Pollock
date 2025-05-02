@@ -47,9 +47,9 @@ The trawl surveys come in a .csv file named "survey-points-data.csv." It contain
 First it is read into the R environment with the read.csv function. Next only entries from the year 2010 are selected so it can be matched to Bio-ORACLE raster layers. 2020 data would have been preferred, but some Bio-ORACLE layers are only available as baseline, and unpredicteded values until 2018/2019. Next, wtcpue values between 1 and 400 kg/ha. Finally these selected values are log transformed with a natural log. This is due to an extreme right skew of the raw data and to aid in model performance. 
 ```{r Reading the Trawl Surveys}
 #reads the trawl survey CSV into R as an object survey.points.data. 
-survey.points.data <- read.csv("survey-points-data.csv")
+#survey.points.data <- read.csv("survey-points-data.csv")
 #reads subset of survey.points by year
-x2010Survey <- subset(survey.points.data, (Year == 2010))
+x2010Survey <- subset(survey.points.data, (Year >= 2010 & Year <= 2020))
 x2010Survey <- subset(x2010Survey, (wtcpue < 400 & wtcpue > 1 ))
 x2010Survey$wtcpue <- log(x2010Survey$wtcpue)
 ```
