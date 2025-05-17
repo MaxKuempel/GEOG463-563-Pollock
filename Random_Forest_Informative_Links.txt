@@ -1,5 +1,6 @@
 Random Forest Videos
 
 Introduction: https://www.youtube.com/watch?v=J4Wdy0Wc_xQ
+Random Forests in 8 minutes: https://www.youtube.com/watch?v=X1MRbEnEq2s
 
 
