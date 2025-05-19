@@ -50,7 +50,7 @@ First it is read into the R environment with the read.csv function. Next only en
 survey.points.data <- read.csv("survey-points-data.csv")
 #reads subset of survey.points by year
 x2010Survey <- subset(survey.points.data, (Year >= 2010 & Year <= 2020))
-x2010Survey <- subset(x2010Survey, (wtcpue > 0 ))
+x2010Survey <- subset(x2010Survey, (wtcpue > 0))
 x2010Survey$wtcpue <- log(x2010Survey$wtcpue)
 #+
 remove(survey.points.data)
@@ -142,6 +142,7 @@ SeaVelMax2010  <- download_layers(dataset_id,
 #Plots newly loaded raster
 plot(SeaVelMax2010, main = "Max Sea Water Speed (m/s)")
 ```
+
 ```{r Chlorophyll}
 
 dataset_id <- "chl_baseline_2000_2018_depthsurf"
@@ -216,7 +217,11 @@ set.seed(222)
 ind <- sample(2,nrow(TrainingData), replace = TRUE,prob = c(0.7,0.3))
 train <- TrainingData[ind==1,]
 test <- TrainingData[ind==2,]
-rf <- randomForest(meanwtcpue~., data=train, proximity=FALSE, ntree=500)
+rf <- randomForest(meanwtcpue~., 
+                   data=train, 
+                   proximity=FALSE, 
+                   ntree=500,
+                   )
 
 #Creates a plot of squared error versus number of trees. 
 plot(rf, main = "Error vs. Trees for Random Forest Model")
@@ -232,7 +237,7 @@ coeficient <- round(coeficient, digits = 3)
 
 #plot predicted versus actual values for the whole training data set. 
 #add the coeficient of observed values below the chart
-plot(predict(rf, test), test$meanwtcpue, 
+plot(exp(predict(rf, test)), exp(test$meanwtcpue), 
      main = "Predicted versus Observed CPUE (2010)", 
      xlab = "Predicted", 
      ylab = "Observed", 
@@ -247,6 +252,8 @@ randomForest::varImpPlot(
   main = "Feature Importance"
 )
 ```
+
+
 ```{r 2010 Prediction}
 #predict wtcpue for the whole region for 2010
 
@@ -279,6 +286,8 @@ plot(Pollock2010Predicted,
      main = "2010 Predicted Pollock Weight Catch per Unit effort (kg/ha)",
      cex = 0.9)
 ```
+
+
 Using the random forest model and 2040 conditions predicted under SSP3-7.0 (A likely climate pathway with some degree of emissions reduction), the above process is repeated. The study range is expanded to include the whole Bering sea. Due to International Date Line dividing the study area and the way that Bio-ORACLE downloads layers, an entire strip of the world is downloaded from 45 to 75 degrees latitude. Bio-ORACLE data has a strip of missing information of 0.5 degrees along the anti-meridian. This makes the movement of the highest quality zones of the fishery hard to visualize. 
 
 To better visualize this data for the report, the final raster is exported as a GeoTIFF to be reprojected in ArcGIS Pro.  
