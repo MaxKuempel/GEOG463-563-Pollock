@@ -10,10 +10,10 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Packages used  are biooracler, terra, randomForest, and caret. biooracler and terra allow for direct downloading of bio-ORACLE layers in R and then raster plotting and analysis respectively. randomForest and caret allow for easy random forest modeling in R. caret is a package that allows easy exploration of data and randomforest models. The devtools package is used to install bioracler from its github page. 
+Packages used are biooracler, terra, randomForest, and caret. biooracler and terra allow for direct downloading of bio-ORACLE layers in R and then raster plotting and analysis respectively. randomForest and caret allow for easy random forest modeling in R. caret is a package that allows easy exploration of data and randomforest models. The devtools package is used to install bioracler from its github page.
 
-Code to install all necessary packages. 
-NOTE: Rtools is required
+Code to install all necessary packages. NOTE: Rtools is required
+
 ```{r eval=FALSE, include=TRUE}
 install.packages("terra")
 install.packages("randomForest")
@@ -29,6 +29,7 @@ devtools::install_github("bio-oracle/biooracler")
 ```
 
 Load all required packages
+
 ```{r Package Library, message=FALSE, warning=FALSE}
 #Libraries for general use.  
 library(biooracler)
@@ -39,12 +40,12 @@ library(randomForest)
 library(caret)
 ```
 
-
 **Reading and processing the pollock trawl surveys**
 
-The trawl surveys come in a .csv file named "survey-points-data.csv." It contains the HaulID, Stratum, lat and long of the trawl, depth of trawl, year of trawlm and weight catch per unit effort (kg/ha). HaulID allows matching of this data with a greater metadata file containing the exact start and end coorinates of the trawl path, net properties and more. 
+The trawl surveys come in a .csv file named "survey-points-data.csv." It contains the HaulID, Stratum, lat and long of the trawl, depth of trawl, year of trawlm and weight catch per unit effort (kg/ha). HaulID allows matching of this data with a greater metadata file containing the exact start and end coordinates of the trawl path, net properties and more.
 
-First it is read into the R environment with the read.csv function. Next only entries from the year 2010 are selected so it can be matched to Bio-ORACLE raster layers. 2020 data would have been preferred, but some Bio-ORACLE layers are only available as baseline, and unpredicteded values until 2018/2019. Next, wtcpue values between 1 and 400 kg/ha. Finally these selected values are log transformed with a natural log. This is due to an extreme right skew of the raw data and to aid in model performance. 
+First it is read into the R environment with the read.csv function. Next only entries from the year 2010 are selected so it can be matched to Bio-ORACLE raster layers. 2020 data would have been preferred, but some Bio-ORACLE layers are only available as baseline, and unpredicted values until 2018/2019. Next, wtcpue values between 1 and 400 kg/ha. Finally these selected values are log transformed with a natural log. This is due to an extreme right skew of the raw data and to aid in model performance.
+
 ```{r Reading the Trawl Surveys}
 #reads the trawl survey CSV into R as an object survey.points.data. 
 survey.points.data <- read.csv("survey-points-data.csv")
@@ -56,18 +57,18 @@ x2010Survey$wtcpue <- log(x2010Survey$wtcpue)
 remove(survey.points.data)
 ```
 
-
 ```{r Pollock Aggregation}
 
 ```
 
 **Loading Bio-ORACLE layers with bioracler**
 
-Bio-ORACLE provides 0.05 degree near global rasters (seam near the anti-meridan). There is a raster for each decade. For training the model, baseline rasters are used. 
+Bio-ORACLE provides 0.05 degree near global rasters (seam near the anti-meridan). There is a raster for each decade. For training the model, baseline rasters are used.
 
-All layers for a particular property can be explored with the list_layers("property") function. The specific variables for a layer (mean, min, max etc) can be explored with info_layer("layer name"). 
+All layers for a particular property can be explored with the list_layers("property") function. The specific variables for a layer (mean, min, max etc) can be explored with info_layer("layer name").
 
-In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2010 in order to download the 2010 baseline layer. 
+In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2010 in order to download the 2010 baseline layer.
+
 ```{r Defining Constraints for 2010}
 time = c('2010-01-01T00:00:00Z', '2010-01-01T00:00:00Z') #2010 layer date
 latitude = c(52, 64) #latitude bounds of the 2010 Trawl data
@@ -75,8 +76,6 @@ longitude = c(-157, -179.975) #longitude bounds of the 2010 Trawl data
 constraints2010 = list(time, latitude, longitude) #combines factors defined above
 names(constraints2010) = c("time", "latitude", "longitude") #assigns names to each constraint so biooracler can read them
 ```
-
-
 
 ```{r Sea Ice, message = FALSE}
 #sea ice thickness baseline layer name
@@ -113,7 +112,6 @@ TempMax2010  <- download_layers(dataset_id,
 #Plots newly loaded raster
 plot(TempMax2010, main = "Max Benthic Temp (C)")
 ```
-
 
 ```{r Depth, message = FALSE}
 #redefine constrains to fit within 1970 time frame of bathymetry
@@ -154,7 +152,7 @@ ChlorophyllMax2010  <- download_layers(dataset_id,
 plot(ChlorophyllMax2010, main = "Low Temp Max Chlorophyll")
 ```
 
-In order to train a model, 2010 ocean condtions (Max temperature, mean dissolved oxygen, maximum sea ice thickness and depth) must be matched to wtcpue values through matched latitudes and longitudes. By extracing a vector of all data point coordiantes we can extract Bio-ORACLE raster values at each coordinate and combine into the dataframe, MultipleData. For training the model, a version of MultipleData is made with all variable except the lattitudes and longitudes. This is so that the model does not take these into account. Finally columns are renamed for readability
+In order to train a model, 2010 ocean conditions (Max temperature, mean dissolved oxygen, maximum sea ice thickness and depth) must be matched to wtcpue values through matched latitudes and longitudes. By extracting a vector of all data point coordinates we can extract Bio-ORACLE raster values at each coordinate and combine into the dataframe, MultipleData. For training the model, a version of MultipleData is made with all variable except the latitudes and longitudes. This is so that the model does not take these into account. Finally columns are renamed for readability
 
 ```{r Extracing and Combining data}
 #Creates a new matrix of the lattitudes and longitudes of every trawl
@@ -205,9 +203,11 @@ TrainingData <- TrainingData[-7]
 #remove duplicate points
 TrainingData <- unique(TrainingData)
 ```
+
 **Creating the Random Forest Model**
 
-The model is created in the randomForest package. It is trained off of 70% of the data and tested on the other 30% (randomly assigned). For repeatability, a set seed of 222 is used. 
+The model is created in the randomForest package. It is trained off of 70% of the data and tested on the other 30% (randomly assigned). For repeatability, a set seed of 222 is used.
+
 ```{r}
 
 set.seed(222)
@@ -253,7 +253,6 @@ randomForest::varImpPlot(
 )
 ```
 
-
 ```{r 2010 Prediction}
 #predict wtcpue for the whole region for 2010
 
@@ -287,10 +286,9 @@ plot(Pollock2010Predicted,
      cex = 0.9)
 ```
 
+Using the random forest model and 2040 conditions predicted under SSP3-7.0 (A likely climate pathway with some degree of emissions reduction), the above process is repeated. The study range is expanded to include the whole Bering sea. Due to International Date Line dividing the study area and the way that Bio-ORACLE downloads layers, an entire strip of the world is downloaded from 45 to 75 degrees latitude. Bio-ORACLE data has a strip of missing information of 0.5 degrees along the anti-meridian. This makes the movement of the highest quality zones of the fishery hard to visualize.
 
-Using the random forest model and 2040 conditions predicted under SSP3-7.0 (A likely climate pathway with some degree of emissions reduction), the above process is repeated. The study range is expanded to include the whole Bering sea. Due to International Date Line dividing the study area and the way that Bio-ORACLE downloads layers, an entire strip of the world is downloaded from 45 to 75 degrees latitude. Bio-ORACLE data has a strip of missing information of 0.5 degrees along the anti-meridian. This makes the movement of the highest quality zones of the fishery hard to visualize. 
-
-To better visualize this data for the report, the final raster is exported as a GeoTIFF to be reprojected in ArcGIS Pro.  
+To better visualize this data for the report, the final raster is exported as a GeoTIFF to be reprojected in ArcGIS Pro.
 
 ```{r 2040 Prediction, message=FALSE, warning=FALSE}
 
@@ -365,8 +363,8 @@ plot(Pollock2040Predicted, main = "2040 Predicted Pollock Weight Catch per Unit 
 
 ```
 
+Saving the final 2040 Prediction layer. Change saveraster to true and input your desired filename followed by .tif. Writes as a geotiff file to your default save location. Default is false to prevent unwanted downloading of files.
 
-Saving the final 2040 Prediction layer. Change saveraster to true and input your desired filename followed by .tif. Writes as a geotiff file to your default save location. Default is false to prevent unwanted downloading of files. 
 ```{r Saving 2040 Layer}
 saveraster <- FALSE
 
@@ -374,4 +372,3 @@ if(saveraster) {rastername <- "Pollock2040Predicted.tif" #Example Name
 writeRaster(Pollock2040Predicted,rastername, overwrite = TRUE)} #writes a new raster
 
 ```
-
