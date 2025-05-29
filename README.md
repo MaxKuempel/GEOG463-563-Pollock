@@ -25,5 +25,6 @@ Include final files/folder names and short description of each
 - Shorten names of each file
 
 # Data Sources
-- Include original links to NOAA DisMAP
-- Include links to BIO-Oracle
+- NOAA DisMAP: https://apps-st.fisheries.noaa.gov/dismap/DisMAP.html
+- Bio-ORACLE: https://www.bio-oracle.org/
+- GitHub Repo for biooracler R package: https://github.com/bio-oracle/biooracler
