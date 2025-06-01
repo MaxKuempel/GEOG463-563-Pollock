@@ -12,16 +12,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Packages used are biooracler, terra, randomForest, and caret. biooracler and terra allow for direct downloading of bio-ORACLE layers in R and then raster plotting and analysis respectively. randomForest and caret allow for easy random forest modeling in R. caret is a package that allows easy exploration of data and randomforest models. The devtools package is used to install bioracler from its github page.
 
-Code to install all necessary packages. NOTE: Rtools is required
+Code to install all necessary packages. NOTE: Rtools may be required for biooracler. Download from here: <https://cran.r-project.org/bin/windows/Rtools/>
 
 ```{r eval=FALSE, include=TRUE}
 install.packages("terra")
 install.packages("randomForest")
 install.packages("caret")
 
-###Installing biooracler from github
-#Windows link for Rtools: https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html 
 
+#installing devtools to install bioracler from GitHub. 
+#Link to biooraclerr repo: https://github.com/bio-oracle/biooracler
 install.packages("devtools")
 library(devtools)
 devtools::install_github("bio-oracle/biooracler")
@@ -44,28 +44,39 @@ library(caret)
 
 The trawl surveys come in a .csv file named "survey-points-data.csv." It contains the HaulID, Stratum, lat and long of the trawl, depth of trawl, year of trawl and weight catch per unit effort (kg/ha). HaulID allows matching of this data with a greater metadata file containing the exact start and end coorinates of the trawl path, net properties and more.
 
-First it is read into the R environment with the read.csv function. Next only entries from the year 2010 are selected so it can be matched to Bio-ORACLE raster layers. 2020 data would have been preferred, but some Bio-ORACLE layers are only available as baseline, and unpredicteded values until 2018/2019. Next, wtcpue values between 1 and 400 kg/ha. Finally these selected values are log transformed with a natural log. This is due to an extreme right skew of the raw data and to aid in model performance.
+First it is read into the R environment with the read.csv function. Data for 2000-2010 and 2010-2020 are loaded in seperately (as to match coresponding decadal Bio-ORACLE layers.)
+
+Weight catch per unit effort (kg of fish per hectare trawled, shortened to wtcpue) values above 0 are selected and log transformed.
 
 ```{r Reading the Trawl Surveys}
 #reads the trawl survey CSV into R as an object survey.points.data. 
 survey.points.data <- read.csv("survey-points-data.csv")
 #reads subset of survey.points by year
+
+#2000-2010 survey points
+x2000Survey <- subset(survey.points.data, (Year >= 2000 & Year <= 2010))
+x2000Survey <- subset(x2000Survey, (wtcpue > 0))
+hist(x2000Survey$wtcpue,main= "Pre log transformed catches (2000-2010)")
+x2000Survey$wtcpue <- log(x2000Survey$wtcpue)
+hist(x2000Survey$wtcpue,main= "Log transformed catches (2000-2010)")
+
+
 x2010Survey <- subset(survey.points.data, (Year >= 2010 & Year <= 2020))
 x2010Survey <- subset(x2010Survey, (wtcpue > 0))
+hist(x2010Survey$wtcpue,main= "Pre log transformed catches (2010-2020)")
 x2010Survey$wtcpue <- log(x2010Survey$wtcpue)
-#+
+hist(x2010Survey$wtcpue,main= "Log transformed catches (2010-2020)")
+
+#remove full dataset from R enviroment
 remove(survey.points.data)
 ```
 
-**Loading Bio-ORACLE layers with bioracler**
+**Loading Bio- layers with bioracler**
 
 Bio-ORACLE provides 0.05 degree near global rasters (seam near the anti-meridan). There is a raster for each decade. For training the model, baseline rasters are used.
 
 All layers for a particular property can be explored with the list_layers("property") function. The specific variables for a layer (mean, min, max etc) can be explored with info_layer("layer name").
 
-<<<<<<< Updated upstream:Working_Model/PollockProjectRMarkdownDecadal.Rmd
-In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2010 in order to download the 2010 baseline layer.
-=======
 In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2000 in order to download the 2000 baseline layer, and January 1st 2010 for 2010-2020.
 
 To ensure each decade downloads the same variables, all variables are defined in one place. Variables are named with a prefix describing the layer, and a suffix: possible suffixes are
@@ -88,7 +99,7 @@ SeaIceThicknessVar <- c("sithick_max")
 #all variables start with" o2_"
 o2Var <- c("o2_range")
 #all varialbes start with "thetao_ "
-BenthicTempVar <- c("thetao_range","thetao_ltmax","thetao_ltmin")
+BenthicTempVar <- c("thetao_range","thetao_max","thetao_min")
 #all variables start with "sws"
 SeaVelVar <- c("sws_max")
 #all variables start with "chl_"
@@ -126,7 +137,6 @@ Chlorophyll2000  <- download_layers(dataset_id5,
                                 constraints = constraints2010)
 
 ```
->>>>>>> Stashed changes:Previous_R_model/PollockProjectRMarkdownDecadal.Rmd
 
 ```{r 2010 Layer Download}
 time = c('2010-01-01T00:00:00Z', '2010-01-01T00:00:00Z') #2010 layer date
@@ -137,26 +147,28 @@ names(constraints2010) = c("time", "latitude", "longitude") #assigns names to ea
 
 dataset_id <- "sithick_baseline_2000_2020_depthsurf"
 SeaIceThickness2010  <- download_layers(dataset_id, 
-                                        variables = "sithick_max", 
+                                        variables = SeaIceThicknessVar, 
                                         constraints = constraints2010)
 dataset_id2 <- "o2_baseline_2000_2018_depthmax"
-DOMean2010  <- download_layers(dataset_id2, 
-                               variables = "o2_mean", 
+DO2010  <- download_layers(dataset_id2, 
+                               variables = o2Var, 
                                constraints = constraints2010)
 dataset_id3 <- "thetao_baseline_2000_2019_depthmax"
-TempMax2010  <- download_layers(dataset_id3, 
-                                variables = "thetao_max", 
+Temp2010  <- download_layers(dataset_id3, 
+                                variables = BenthicTempVar, 
                                 constraints = constraints2010)
 dataset_id4 <- "sws_baseline_2000_2019_depthmax"
-SeaVelMax2010  <- download_layers(dataset_id4, 
-                                variables = "sws_max", 
+SeaVel2010  <- download_layers(dataset_id4, 
+                                variables = SeaVelVar, 
                                 constraints = constraints2010)
 dataset_id5 <- "chl_baseline_2000_2018_depthsurf"
-ChlorophyllMax2010  <- download_layers(dataset_id5, 
-                                variables = c("chl_ltmax", "chl_ltmin","chl_max","chl_mean"),
+Chlorophyll2010  <- download_layers(dataset_id5, 
+                                variables = ChlorVar,
                                 constraints = constraints2010)
 
 ```
+
+Depth is downloaded separately of other layers as its date in Bio-ORACLE is set to 1970. Same geographic constraints are used
 
 ```{r Bathymetry Download}
 #redefine constrains to fit within 1970 time frame of bathymetry
@@ -173,54 +185,77 @@ Depth <- download_layers(dataset_id6,
                          constraints = constraints1970)
 ```
 
-In order to train a model, 2010 ocean condtions (Max temperature, mean dissolved oxygen, maximum sea ice thickness and depth) must be matched to wtcpue values through matched latitudes and longitudes. By extracing a vector of all data point coordiantes we can extract Bio-ORACLE raster values at each coordinate and combine into the dataframe, MultipleData. For training the model, a version of MultipleData is made with all variable except the lattitudes and longitudes. This is so that the model does not take these into account. Finally columns are renamed for readability
+In order to train a model, Ocean condtions must be matched to wtcpue values through matched latitudes and longitudes. The extract function allows for this. By extracing a vector of all data point coordiantes we can extract Bio-ORACLE raster values at each coordinate and combine into a dataframe for that decade,called MultipleData[start of decade]. For training the model, a version of MultipleData is made with all variable except the lattitudes and longitudes, with both decades included. This is so that the model does not take these into account. Finally columns are renamed for readability
 
 ```{r Extracing and Combining data}
 #Creates a new matrix of the lattitudes and longitudes of every trawl
-b <- cbind(x2010Survey$LON, x2010Survey$LAT) 
+Coord2000 <- cbind(x2000Survey$LON,x2000Survey$LAT)
+Coord2010 <- cbind(x2010Survey$LON, x2010Survey$LAT) 
+
 #The "extract" function takes in a lat and long and outputs the value of the raster at that point
 #by using it on the whole matrix b, it outputs a list in order of the raster values.
 #process is repeated for all bio-ORACLE layers before being bound into a single data frame
-MultipleData <- data.frame(terra::extract(SeaIceThickness2010,b), 
-                           terra::extract(TempMax2010,b), 
-                           terra::extract(DOMean2010,b),
-                           terra::extract(SeaVelMax2010,b),
-                           terra::extract(Depth,b), 
-                           terra::extract(ChlorophyllMax2010,b),
+
+MultipleData2000 <- data.frame(terra::extract(SeaIceThickness2000,Coord2000), 
+                           terra::extract(Temp2000,Coord2000), 
+                           terra::extract(DO2000,Coord2000),
+                           terra::extract(SeaVel2000,Coord2000),
+                           terra::extract(Depth,Coord2000), 
+                           terra::extract(Chlorophyll2000,Coord2000),
+                           x2000Survey$LON, 
+                           x2000Survey$LAT, 
+                           x2000Survey$wtcpue)
+
+MultipleData2010 <- data.frame(terra::extract(SeaIceThickness2010,Coord2010), 
+                           terra::extract(Temp2010,Coord2010), 
+                           terra::extract(DO2010,Coord2010),
+                           terra::extract(SeaVel2010,Coord2010),
+                           terra::extract(Depth,Coord2010), 
+                           terra::extract(Chlorophyll2010,Coord2010),
                            x2010Survey$LON, 
                            x2010Survey$LAT, 
                            x2010Survey$wtcpue)
 #Creates new data frame with the latitudes and longitudes removed. 
-TrainingData <- data.frame(MultipleData$thetao_max, 
-                          MultipleData$sithick_max,  
-                           MultipleData$o2_mean, 
-                          MultipleData$sws_max,
-                          MultipleData$chl_ltmax,
-                          MultipleData$bathymetry_mean, 
-                           MultipleData$x2010Survey.wtcpue)
+
+col_names <- c("sithick_max", "thetao_range",
+"thetao_max","thetao_min", "o2_range", "current_max","chl_ltmax", "depth","lat", "lon", "wtcpue")
+
+
+TrainingData <- data.frame(1:(nrow(MultipleData2000) + nrow(MultipleData2010)))
+
+for (i in 1:ncol(MultipleData2000)) {
+TrainingData[,i] <- append(MultipleData2000[,i], MultipleData2010[,i])
+names(TrainingData)[i] <- names(MultipleData2000)[i]
+}
 
 #Rename columns. Otherwise all column names are preceded with MultipleData. Nicer to read. 
-names(TrainingData)[names(TrainingData) == "MultipleData.thetao_max"] <- "thetao_max"
-names(TrainingData)[names(TrainingData) == "MultipleData.sithick_max"] <- "sithick_max"
-names(TrainingData)[names(TrainingData) == "MultipleData.o2_mean"] <- "o2_mean"
-names(TrainingData)[names(TrainingData) == "MultipleData.sws_max"] <- "current_max"
-names(TrainingData)[names(TrainingData) == "MultipleData.bathymetry_mean"] <- "depth"
-names(TrainingData)[names(TrainingData) == "MultipleData.x2010Survey.wtcpue"] <- "wtcpue"
-names(TrainingData)[names(TrainingData) == "MultipleData.chl_ltmax"] <- "chl_ltmax"
+#names(TrainingData)[names(TrainingData) == "MultipleData.thetao_max"] <- "thetao_max"
+#names(TrainingData)[names(TrainingData) == "MultipleData.sithick_max"] <- "sithick_max"
+#names(TrainingData)[names(TrainingData) == "MultipleData.o2_mean"] <- "o2_mean"
+#names(TrainingData)[names(TrainingData) == "MultipleData.sws_max"] <- "current_max"
+#names(TrainingData)[names(TrainingData) == "MultipleData.bathymetry_mean"] <- "depth"
+#names(TrainingData)[names(TrainingData) == "MultipleData.x2010Survey.wtcpue"] <- "wtcpue"
+#names(TrainingData)[names(TrainingData) == "MultipleData.chl_ltmax"] <- "chl_ltmax"
 
 #Displays the first few rows of the data. 
 head(TrainingData)
 
 
+
 #mutate aggregation of training data
 library(tidyverse)
 TrainingData <- TrainingData %>%
-  group_by(thetao_max,sithick_max,o2_mean,current_max,depth) %>%
+  group_by(thetao_range, sithick_max,o2_range,bathymetry_mean) %>%
   mutate(
-    meanwtcpue = mean(wtcpue)
+    meanwtcpue = mean(x2000Survey.wtcpue)
   )
 
-TrainingData <- TrainingData[-7]
+
+#remove old wtcpue as well as lat and lon
+TrainingData$x2000Survey.wtcpue <- NULL
+TrainingData$x2000Survey.LAT <- NULL
+TrainingData$x2000Survey.LON <- NULL
+
 #remove duplicate points
 TrainingData <- unique(TrainingData)
 ```
@@ -238,10 +273,14 @@ set.seed(222)
 ind <- sample(2,nrow(TrainingData), replace = TRUE,prob = c(0.7,0.3))
 train <- TrainingData[ind==1,]
 test <- TrainingData[ind==2,]
-rf <- randomForest(meanwtcpue~., 
-                   data=train, 
+
+
+
+rf <- randomForest(meanwtcpue~. ,
+                  data = train ,
                    proximity=FALSE, 
-                   ntree=500,
+                  ntree=500,
+                   mtry = 1
                    )
 
 #Creates a plot of squared error versus number of trees. 
@@ -249,7 +288,7 @@ plot(rf, main = "Error vs. Trees for Random Forest Model")
 print(rf)
 
 #linear regression of predicted versus observed values
-lmod <- lm(predict(rf, test)~test$meanwtcpue)
+lmod <- lm(predict(rf, test)~ test$meanwtcpue)
 summary(lmod)
 
 #extract the coefficient of observed values from the linear model
@@ -278,28 +317,22 @@ randomForest::varImpPlot(
 #predict wtcpue for the whole region for 2010
 
 #Create a new data frame for all the properties used in the model
-regiondata <- data.frame(values(TempMax2010),
-                         values(SeaIceThickness2010),
-                         values(DOMean2010),
-                         values(Depth),
-                         values(SeaVelMax2010),
-                         values(ChlorophyllMax2010))
-
-#rename columns, have to be consistent with model to predict
-#have to use the same names as used when training the model
-names(regiondata)[names(regiondata) == "thetao_max_2"] <- "thetao_max"
-names(regiondata)[names(regiondata) == "sithick_max_2"] <- "sithick_max"
-names(regiondata)[names(regiondata) == "o2_mean_2"] <- "o2_mean"
-names(regiondata)[names(regiondata) == "bathymetry_mean"] <- "depth"
-names(regiondata)[names(regiondata) == "sws_max"] <- "current_max"
+RasterList <- list(Temp2010, 
+                   SeaIceThickness2010, 
+                   DO2010, 
+                   SeaVel2010, 
+                   Chlorophyll2010,
+                   Depth)
+all_rasters <- do.call(c, RasterList)  # c() merges SpatRaster layers]
+RegionData2010 <- as.data.frame(all_rasters, na.rm = FALSE)  
 
 
 #Creates copy of Bio-ORACLE raster then overwrites data with model predictions
 #Assigns a new object to one of the Bio-ORACLE layers. Ensures that all spatial information is maintained. 
-Pollock2010Predicted <- DOMean2010
+Pollock2010Predicted <- DO2010
 
 #unlog transform data and overwrite data with predictions of whole region (exp(x)= e^x)
-values(Pollock2010Predicted) <- exp(predict(rf, regiondata))
+values(Pollock2010Predicted) <- exp(predict(rf, RegionData2010))
 
 #plot the prediction, add title and reduce text size to 90% of default
 plot(Pollock2010Predicted, 
@@ -315,7 +348,7 @@ To better visualize this data for the report, the final raster is exported as a 
 
 #Define 2040 Conditions
 time = c('2040-01-01T00:00:00Z','2040-01-01T00:00:00Z') #Sets time to 2040 decade
-latitude = c(45, 75) #latitude bounds of the Bering sea
+latitude = c(52, 64) #latitude bounds of the Bering sea
 longitude = c(-157, -179.975) #longitude bounds the whole biooracler data set. 
 constraints = list(time, latitude, longitude) #combines factors defined above
 names(constraints) = c("time", "latitude", "longitude") #assign names
@@ -329,25 +362,23 @@ dataset_idSeaVel <- "sws_ssp370_2020_2100_depthmax"
 
 #Download max benthic temp prediction  
 MaxTemp2040  <- download_layers(dataset_idTemp, 
-                                variables = "thetao_max", 
+                                variables = BenthicTempVar, 
                                 constraints = constraints)
 #Download max sea ice thickness prediction
 SeaIceThickness2040  <- download_layers(dataset_idSIThick, 
-                                        variables = "sithick_max", 
+                                        variables = SeaIceThicknessVar, 
                                         constraints = constraints)
 #download mean dissolved o2 prediction
 MeanO22040  <- download_layers(dataset_idDO, 
-                               variables = "o2_mean", 
+                               variables = o2Var, 
                                constraints = constraints)
 #currents
 SeaVelMax2040 <- download_layers(dataset_idSeaVel,
-                                 variables = "sws_max",
-                                 constraints = constraints
-  
-)
+                                 variables = SeaVelVar,
+                                 constraints = constraints)
 #chlorophyll lt_max
 Chl_ltmax_2040 <- download_layers(dataset_idCHL,
-                                  variables = "chl_ltmax",
+                                  variables = ChlorVar,
                                   constraints = constraints)
 
 #redefines time range to 1970, as that is the time associated with bathymetry layer. 
@@ -368,9 +399,6 @@ regiondata <- data.frame(values(MaxTemp2040),
                          values(SeaVelMax2040),
                          values(Chl_ltmax_2040))
 
-#rename columns, have to be consistent with model to predict. Only one needing renaming is depth
-names(regiondata)[names(regiondata) == "bathymetry_mean"] <- "depth"
-names(regiondata)[names(regiondata) == "sws_max"] <- "current_max"
 
 #Creates copy of biooracler raster then overwrites data with model predictions
 #ensures spatial reference, cells, and area are the same
@@ -393,3 +421,5 @@ if(saveraster) {rastername <- "Pollock2040Predicted.tif" #Example Name
 writeRaster(Pollock2040Predicted,rastername, overwrite = TRUE)} #writes a new raster
 
 ```
+
+
