@@ -1,0 +1,148 @@
+---
+title: "MappingFutureOceanConditions"
+author: "Max Kuempel"
+date: "2025-06-01"
+output: html_document
+---
+---
+title: "Conditon Maps"
+output: html_notebook
+---
+
+This notebook is used for mapping the future conditons of the Bering Sea. Bio-ORACLE layers are used (to match models). Layers are downloaded in the same way as in the model
+
+For how to install bioracler, please consult the pollock modeling notebook under Working_Model. 
+
+```{r Setup Packages}
+library(biooracler)
+library(terra)
+library(ggplot2)
+library(tidyterra) #Integrate terra plots into ggplot2
+library(gridExtra)
+```
+
+Same contraints are used as in modeling for consistency
+```{r Setup Constrains}
+time = c('2010-01-01T00:00:00Z', '2010-01-01T00:00:00Z') #2010 layer date
+latitude = c(52, 64) #latitude bounds of the 2010 Trawl data
+longitude = c(-157, -179.975) #longitude bounds of the 2010 Trawl data
+constraints2010 = list(time, latitude, longitude) #combines factors defined above
+names(constraints2010) = c("time", "latitude", "longitude") #assigns names to each constraint so biooracler can read them
+
+
+time2040 = c('2040-01-01T00:00:00Z', '2040-01-01T00:00:00Z')
+constraints2040 = list(time2040, latitude, longitude)
+names(constraints2040) = c("time", "latitude", "longitude")
+```
+
+```{r Temperature}
+BenthicTempBaselineID <- "thetao_baseline_2000_2019_depthmax"
+TempAvg2010  <- download_layers(BenthicTempBaselineID, 
+                                variables = "thetao_mean", 
+                                constraints = constraints2010)
+
+BenthicTemp370ID <- "thetao_ssp370_2020_2100_depthmax"
+TempAvg2040ssp370  <- download_layers(BenthicTemp370ID, 
+                                variables = "thetao_mean", 
+                                constraints = constraints2040)
+
+BenthicTemp585ID <- "thetao_ssp585_2020_2100_depthmax"
+TempAvg2040ssp585  <- download_layers(BenthicTemp585ID, 
+                                variables = "thetao_mean", 
+                                constraints = constraints2040)
+
+
+```
+
+```{r SeaIce}
+IceThickBaselineID <- "sithick_baseline_2000_2020_depthsurf"
+IceThickAvg2010  <- download_layers(IceThickBaselineID, 
+                                variables = "sithick_mean", 
+                                constraints = constraints2010)
+
+IceThick370ID <- "sithick_ssp370_2020_2100_depthsurf"
+IceThickAvg2040ssp370  <- download_layers(IceThick370ID, 
+                                variables = "sithick_mean", 
+                                constraints = constraints2040)
+
+IceThick585ID <- "sithick_ssp585_2020_2100_depthsurf"
+IceThickAvg2040ssp585  <- download_layers(IceThick585ID, 
+                                variables = "sithick_mean", 
+                                constraints = constraints2040)
+
+```
+
+
+```{r Plotting}
+#Text size
+ textscale <- theme(
+    legend.title = element_text(size = 10),  # Legend label size
+    legend.text = element_text(size = 10)    # Tick label size
+  )
+
+### Temperature ###
+scale <- c(-1, 9)
+colorscheme <-  scale_fill_gradient2(
+    low = "darkblue",     # Low values
+    mid = "lightblue",    # Midpoint
+    high = "red",     # High values
+    midpoint = 2,     # Center value
+    name = "Temp (C)",
+   limits = scale)
+
+T2010 <- ggplot()+
+  geom_spatraster(data = TempAvg2010)+
+  colorscheme+
+  labs(title = "2010")+
+  theme_bw() + textscale
+
+
+T2040_3 <- ggplot()+
+  geom_spatraster(data = TempAvg2040ssp370)+
+  colorscheme+
+  labs(title = "2040 (SSP3-7.0)")+
+  theme_bw() + textscale
+
+T2040_5 <- ggplot()+
+  geom_spatraster(data = TempAvg2040ssp585)+
+  colorscheme+
+  labs(title = "2040 (SSP5-8.5)")+
+  theme_bw() + textscale
+
+### Sea Ice Thickness ###
+scale <- c(0, 0.5)
+colorscheme <-  scale_fill_gradient2(
+    low = "darkblue",     # Low values
+    mid = "blue",    # Midpoint
+    high = "white",     # High values
+    midpoint = 0.1,     # Center value
+    name = "Thickness (m)",
+   limits = scale)
+
+SI2010 <- ggplot()+
+  geom_spatraster(data = IceThickAvg2010)+
+  colorscheme+
+  labs(title = "2010")+
+  theme_bw() + textscale
+
+
+SI2040_3 <- ggplot()+
+  geom_spatraster(data = IceThickAvg2040ssp370)+
+  colorscheme+
+  labs(title = "2040 (SSP3-7.0)")+
+  theme_bw() + textscale
+
+SI2040_5 <- ggplot()+
+  geom_spatraster(data = IceThickAvg2040ssp585)+
+  colorscheme+
+  labs(title = "2040 (SSP5-8.5)")+
+  theme_bw() + textscale
+
+### Plotting ###
+
+grid.arrange(T2010, T2040_3,T2040_5,SI2010,SI2040_3,SI2040_5,
+             nrow = 2)
+
+```
+
+
