@@ -63,7 +63,70 @@ Bio-ORACLE provides 0.05 degree near global rasters (seam near the anti-meridan)
 
 All layers for a particular property can be explored with the list_layers("property") function. The specific variables for a layer (mean, min, max etc) can be explored with info_layer("layer name").
 
+<<<<<<< Updated upstream:Working_Model/PollockProjectRMarkdownDecadal.Rmd
 In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2010 in order to download the 2010 baseline layer.
+=======
+In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2000 in order to download the 2000 baseline layer, and January 1st 2010 for 2010-2020.
+
+To ensure each decade downloads the same variables, all variables are defined in one place. Variables are named with a prefix describing the layer, and a suffix: possible suffixes are
+
+-   mean: Average for the decade
+
+-   max: Maximum for the decade
+
+-   min: Minimum for the decade
+
+-   range: Range of values (difference of max and min for a decade).
+
+-   ltmax: Average Highest value for a year in the decade
+
+-   ltmin: Average lowest value for a year in the decade
+
+```{r Specifying Variables}
+#all variables start with "sithick_"
+SeaIceThicknessVar <- c("sithick_max")
+#all variables start with" o2_"
+o2Var <- c("o2_range")
+#all varialbes start with "thetao_ "
+BenthicTempVar <- c("thetao_range","thetao_ltmax","thetao_ltmin")
+#all variables start with "sws"
+SeaVelVar <- c("sws_max")
+#all variables start with "chl_"
+ChlorVar <- c("chl_ltmax","chl_ltmin")
+
+
+```
+
+```{r 2000 Layer Download}
+time = c('2000-01-01T00:00:00Z', '2000-01-01T00:00:00Z') #2010 layer date
+latitude = c(52, 64) #latitude bounds of the 2010 Trawl data
+longitude = c(-157, -179.975) #longitude bounds of the 2010 Trawl data
+constraints2010 = list(time, latitude, longitude) #combines factors defined above
+names(constraints2010) = c("time", "latitude", "longitude") #assigns names to each constraint so biooracler can read them
+
+dataset_id <- "sithick_baseline_2000_2020_depthsurf"
+SeaIceThickness2000  <- download_layers(dataset_id, 
+                                        variables = SeaIceThicknessVar, 
+                                        constraints = constraints2010)
+dataset_id2 <- "o2_baseline_2000_2018_depthmax"
+DO2000  <- download_layers(dataset_id2, 
+                               variables = o2Var, 
+                               constraints = constraints2010)
+dataset_id3 <- "thetao_baseline_2000_2019_depthmax"
+Temp2000  <- download_layers(dataset_id3, 
+                                variables = BenthicTempVar, 
+                                constraints = constraints2010)
+dataset_id4 <- "sws_baseline_2000_2019_depthmax"
+SeaVel2000  <- download_layers(dataset_id4, 
+                                variables = SeaVelVar, 
+                                constraints = constraints2010)
+dataset_id5 <- "chl_baseline_2000_2018_depthsurf"
+Chlorophyll2000  <- download_layers(dataset_id5, 
+                                variables = ChlorVar,
+                                constraints = constraints2010)
+
+```
+>>>>>>> Stashed changes:Previous_R_model/PollockProjectRMarkdownDecadal.Rmd
 
 ```{r 2010 Layer Download}
 time = c('2010-01-01T00:00:00Z', '2010-01-01T00:00:00Z') #2010 layer date
