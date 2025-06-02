@@ -1,7 +1,7 @@
 ---
-title: "Geog361Project_Markdown"
-author: "Max Kuempel"
-date: "2025-03-15"
+title: "Working Pollock ML model with Decadal Aggregation"
+author: "Max Kuempel, Tzu-Chun Kao, Owen Peterson"
+date: "2025-06-2"
 output:
   pdf_document: default
 ---
