@@ -422,4 +422,27 @@ writeRaster(Pollock2040Predicted,rastername, overwrite = TRUE)} #writes a new ra
 
 ```
 
+Plotting side by side maps of 2010 and 2040 catches. Saves as a png in the figures folder. 
+```{r}
+library(gridExtra) #Side by side plotting
+library(tidyterra) #ggplot and terra integration
+library(viridis)
+
+  colorscheme <- scale_fill_gradient2(
+    low = "black",     # Low values
+    mid = "blue4",    # Midpoint
+    high = "yellow",     # High values
+    midpoint = 40,     # Center value
+    name = "Pollock CPUE (kg/ha)",
+    limits = c(0,300))
+  
+gg2010 <- ggplot() + geom_spatraster(data = Pollock2010Predicted)+
+  colorscheme + labs(title = "2010 Baseline conditons") + theme_bw()
+gg2040 <- ggplot() + geom_spatraster(data = Pollock2040Predicted)+
+  colorscheme + labs(title = "2040 Predicted (SSP3-7.0)") +theme_bw()
+#saving image
+png("Figures/PollockMap2010_2040.png", width = 800, height = 400)
+grid.arrange(gg2010, gg2040, nrow = 1)
+dev.off()
+```
 

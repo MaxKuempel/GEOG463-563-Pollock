@@ -4,14 +4,10 @@ author: "Max Kuempel"
 date: "2025-06-01"
 output: html_document
 ---
----
-title: "Conditon Maps"
-output: html_notebook
----
 
 This notebook is used for mapping the future conditons of the Bering Sea. Bio-ORACLE layers are used (to match models). Layers are downloaded in the same way as in the model
 
-For how to install bioracler, please consult the pollock modeling notebook under Working_Model. 
+For how to install bioracler, please consult the pollock modeling notebook under Working_Model.
 
 ```{r Setup Packages}
 library(biooracler)
@@ -22,6 +18,7 @@ library(gridExtra)
 ```
 
 Same contraints are used as in modeling for consistency
+
 ```{r Setup Constrains}
 time = c('2010-01-01T00:00:00Z', '2010-01-01T00:00:00Z') #2010 layer date
 latitude = c(52, 64) #latitude bounds of the 2010 Trawl data
@@ -71,7 +68,6 @@ IceThickAvg2040ssp585  <- download_layers(IceThick585ID,
                                 constraints = constraints2040)
 
 ```
-
 
 ```{r Plotting}
 #Text size
@@ -144,5 +140,3 @@ grid.arrange(T2010, T2040_3,T2040_5,SI2010,SI2040_3,SI2040_5,
              nrow = 2)
 
 ```
-
-
