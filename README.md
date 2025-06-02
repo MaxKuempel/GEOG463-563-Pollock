@@ -20,7 +20,7 @@ Previous work has shown this approach is feasible, though the exploratory model 
 ![Predicted Pollock CPUE map for Eastern Bering Sea in 2040 (CMIP6 SSP3-7.0)](Previous_R_model/ExploratoryMapPollockCPUE2040.png "Predicted Pollock CPUE map for Eastern Bering Sea in 2040 (CMIP6 SSP3-7.0")
 
 # Folders and Structure
-- Archive: Contains old models and the Jupyter based model made by Pedro Henrique Batista de Barros
+- Archive: Contains old models and the Jupyter based model made by Pedro Henrique Batista de Barros (removed with public repo, as this is actuve research)
 - Sources: Papers, Books and RIS files used for modeling and whitepaper
 - Supplemental_code: R markdown for figure generation. Used to make maps for whitepaper and other uses as needed
 - **Working_Model: The actual model in use. Contains datasets needed as well. All analysis conducted here**
