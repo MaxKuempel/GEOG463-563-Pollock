@@ -185,7 +185,7 @@ Depth <- download_layers(dataset_id6,
                          constraints = constraints1970)
 ```
 
-In order to train a model, Ocean condtions must be matched to wtcpue values through matched latitudes and longitudes. The extract function allows for this. By extracing a vector of all data point coordiantes we can extract Bio-ORACLE raster values at each coordinate and combine into a dataframe for that decade,called MultipleData[start of decade]. For training the model, a version of MultipleData is made with all variable except the lattitudes and longitudes, with both decades included. This is so that the model does not take these into account. Finally columns are renamed for readability
+In order to train a model, Ocean condtions must be matched to wtcpue values through matched latitudes and longitudes. The extract function allows for this. By extracing a vector of all data point coordiantes we can extract Bio-ORACLE raster values at each coordinate and combine into a dataframe for that decade,called MultipleData[start of decade]. For training the model, a version of MultipleData is made with all variable except the lattitudes and longitudes, with both decades included. This is so that the model does not take these into account. Survey trawls are made roughly at the same points but are slightly off year to year. To aggregate the trawl data temporily to the same time scale of the rasters, dplyr is used to group points in multipled data based off of properties and the mean wtcpue is calcualted for points in the same cell. The unique() function is then used to remove duplicate points (will interfere with model training). 
 
 ```{r Extracing and Combining data}
 #Creates a new matrix of the lattitudes and longitudes of every trawl
