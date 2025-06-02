@@ -323,7 +323,7 @@ RasterList <- list(Temp2010,
                    SeaVel2010, 
                    Chlorophyll2010,
                    Depth)
-all_rasters <- do.call(c, RasterList)  # c() merges SpatRaster layers]
+all_rasters <- do.call(base::c, RasterList)  # c() merges SpatRaster layers]
 RegionData2010 <- as.data.frame(all_rasters, na.rm = FALSE)  
 
 
