@@ -1,6 +1,5 @@
 # Guide to Pollock Random Forest Model
 
-
 This model pairs NOAA DisMAP pollock ground trawls in the Eastern Bering Sea. This data is stored as points in the file survey-points-data.csv. Points represent the center of survey trawls, and the response variable of interest is Weight Catch per Unit Effort (wtcpue in data). This is measured in kg/ha, or kg of pollock caught per hectare swept (determined from trawl length and net width). 
 
 Ocean physical properties are provided by Bio-ORACLE. The bioracler package is used to download these layers directly in R. This package is not installable in the normal method, as it must be installed from its github page (https://github.com/bio-oracle/biooracler). Text in the notebook details this and issues that may occur when installing it. Layers can be explored in biooracler with list_layers(!["keyword"]) and specific variables with info_layer("layer id")
@@ -15,5 +14,7 @@ Downloading layers from biooracler can be slow the first run through, but will r
 ## Current Model Parameters and Performance
 The current model makes use of benthic temperature, sea ice thickness, dissolved oxygen, currents, chlorophyll and depth. Current percent variance explained is 43%. 
 
-
+**HOW TO USE**
+1) run PackageInstall.R to install all nessecary packages
+2) run PollockProjectRMarkdownDecadal.Rmd. This is the main markdown with all analysis and explanations
 
