@@ -275,16 +275,23 @@ train <- TrainingData[ind==1,]
 test <- TrainingData[ind==2,]
 
 
-
-rf <- randomForest(meanwtcpue~. ,
+library(caret)
+tunegrid <-
+  expand.grid(
+    mtry = c(1:20)
+      )
+rf <- train(meanwtcpue~. ,
                   data = train ,
+            method = "rf",
                    proximity=FALSE, 
                   ntree=500,
-                   mtry = 1
+                   tuneGrid = tunegrid,
+            trControl = trainControl("cv"),
+            number = 5
                    )
 
 #Creates a plot of squared error versus number of trees. 
-plot(rf, main = "Error vs. Trees for Random Forest Model")
+plot(rf$finalModel, main = "Error vs. Trees for Random Forest Model")
 print(rf)
 
 #linear regression of predicted versus observed values
@@ -297,10 +304,21 @@ coeficient <- round(coeficient, digits = 3)
 
 #plot predicted versus actual values for the whole training data set. 
 #add the coeficient of observed values below the chart
+
 plot(exp(predict(rf, test)), exp(test$meanwtcpue), 
-     main = "Predicted versus Observed CPUE (2010)", 
+     main = "Predicted versus Observed CPUE (2000-2020)", 
      xlab = "Predicted", 
-     ylab = "Observed", 
+     ylab = "Observed ", 
+     sub = paste("Slope of coeficient:", as.character(coeficient),  "(p < 0.05)"),
+     col = "darkcyan",
+     pch = 19)
+abline(lmod)
+
+#Log Transformed
+plot((predict(rf, test)), (test$meanwtcpue), 
+     main = "Log Predicted versus Log Observed CPUE (2000-2020)", 
+     xlab = "Predicted (log transformed)", 
+     ylab = "Observed (log transformed)", 
      sub = paste("Slope of coeficient:", as.character(coeficient),  "(p < 0.05)"),
      pch = 19)
 abline(lmod)
@@ -308,13 +326,57 @@ abline(lmod)
 #feature importance
  
 randomForest::varImpPlot(
-  rf,
+  rf$finalModel,
   main = "Feature Importance"
 )
 ```
 
 ```{r 2010 Prediction}
 #predict wtcpue for the whole region for 2010
+
+#Define 2040 Conditions
+time = c('2010-01-01T00:00:00Z','2010-01-01T00:00:00Z') #Sets time to 2040 decade
+latitude = c(52, 64) #latitude bounds of the Bering sea
+longitude = c(-179.75, 179.75) #longitude bounds the whole biooracler data set. 
+constraints = list(time, latitude, longitude) #combines factors defined above
+names(constraints) = c("time", "latitude", "longitude") #assign names
+
+#assigns dataset names to ID's for downloading
+dataset_idTemp <-"thetao_baseline_2000_2019_depthmax"
+dataset_idSIThick <- "sithick_baseline_2000_2020_depthsurf"
+dataset_idDO <- "o2_baseline_2000_2018_depthmax"
+dataset_idCHL <- "chl_baseline_2000_2018_depthsurf" 
+dataset_idSeaVel <- "sws_baseline_2000_2019_depthmax"
+
+#Download max benthic temp prediction  
+Temp2010  <- download_layers(dataset_idTemp, 
+                                variables = BenthicTempVar, 
+                                constraints = constraints)
+#Download max sea ice thickness prediction
+SeaIceThickness2010  <- download_layers(dataset_idSIThick, 
+                                        variables = SeaIceThicknessVar, 
+                                        constraints = constraints)
+#download mean dissolved o2 prediction
+DO2010  <- download_layers(dataset_idDO, 
+                               variables = o2Var, 
+                               constraints = constraints)
+#currents
+SeaVel2010 <- download_layers(dataset_idSeaVel,
+                                 variables = SeaVelVar,
+                                 constraints = constraints)
+#chlorophyll lt_max
+Chlorophyll2010 <- download_layers(dataset_idCHL,
+                                  variables = ChlorVar,
+                                  constraints = constraints)
+
+#redefines time range to 1970, as that is the time associated with bathymetry layer. 
+time = c('1970-01-01T00:00:00Z', '1970-01-01T00:00:00Z') 
+constraints = list(time, latitude, longitude) #combines factors defined above, uses same lat and long with redefined time. 
+names(constraints) = c("time", "latitude", "longitude") 
+dataset_id5 <- "terrain_characteristics"
+Depth <- download_layers(dataset_id5, 
+                         variables = "bathymetry_mean", 
+                         constraints = constraints)
 
 #Create a new data frame for all the properties used in the model
 RasterList <- list(Temp2010, 
@@ -331,13 +393,28 @@ RegionData2010 <- as.data.frame(all_rasters, na.rm = FALSE)
 #Assigns a new object to one of the Bio-ORACLE layers. Ensures that all spatial information is maintained. 
 Pollock2010Predicted <- DO2010
 
-#unlog transform data and overwrite data with predictions of whole region (exp(x)= e^x)
-values(Pollock2010Predicted) <- exp(predict(rf, RegionData2010))
+#un-log transform data
+values(Pollock2010Predicted)[!is.na(values(Pollock2010Predicted))] <- 
+  exp(predict(rf$finalModel, newdata = na.omit(RegionData2010)))
 
-#plot the prediction, add title and reduce text size to 90% of default
-plot(Pollock2010Predicted, 
-     main = "2010 Predicted Pollock Weight Catch per Unit effort (kg/ha)",
-     cex = 0.9)
+Pollock2010Predicted <- terra::rotate(Pollock2010Predicted)
+e <- ext(-200, -150, 52, 64)
+Pollock2010Predicted <-crop(Pollock2010Predicted , e)
+#Plot the whole prediction map
+
+
+  colorscheme <- scale_fill_gradient2(
+    low = "black",     # Low values
+    mid = "blue4",    # Midpoint
+    high = "yellow",     # High values
+    midpoint = 40,     # Center value
+    name = "Pollock CPUE (kg/ha)",
+    limits = c(0,300))
+  
+ggplot() + geom_spatraster(data = Pollock2010Predicted) + 
+  labs(title = "2010 Predicted Pollock Weight Catch per Unit effort (kg/ha)")+ 
+  colorscheme+
+theme_bw()
 ```
 
 Using the random forest model and 2040 conditions predicted under SSP3-7.0 (A likely climate pathway with some degree of emissions reduction), the above process is repeated. The study range is expanded to include the whole Bering sea. Due to International Date Line dividing the study area and the way that Bio-ORACLE downloads layers, an entire strip of the world is downloaded from 45 to 75 degrees latitude. Bio-ORACLE data has a strip of missing information of 0.5 degrees along the anti-meridian. This makes the movement of the highest quality zones of the fishery hard to visualize.
@@ -349,7 +426,7 @@ To better visualize this data for the report, the final raster is exported as a 
 #Define 2040 Conditions
 time = c('2040-01-01T00:00:00Z','2040-01-01T00:00:00Z') #Sets time to 2040 decade
 latitude = c(52, 64) #latitude bounds of the Bering sea
-longitude = c(-157, -179.975) #longitude bounds the whole biooracler data set. 
+longitude = c(-179.75, 179.75) #longitude bounds the whole biooracler data set. 
 constraints = list(time, latitude, longitude) #combines factors defined above
 names(constraints) = c("time", "latitude", "longitude") #assign names
 
@@ -404,11 +481,27 @@ regiondata <- data.frame(values(MaxTemp2040),
 #ensures spatial reference, cells, and area are the same
 Pollock2040Predicted <- MeanO22040
 #un-log transform data
-values(Pollock2040Predicted) <- exp(predict(rf, regiondata))
+values(Pollock2040Predicted)[!is.na(values(Pollock2040Predicted))] <- 
+  exp(predict(rf$finalModel, newdata = na.omit(regiondata)))
 
+Pollock2040Predicted <- terra::rotate(Pollock2040Predicted)
+e <- ext(-200, -150, 52, 64)
+Pollock2040Predicted <-crop(Pollock2040Predicted , e)
 #Plot the whole prediction map
-plot(Pollock2040Predicted, main = "2040 Predicted Pollock Weight Catch per Unit effort (kg/ha)",
-     cex = 0.9)
+
+
+  colorscheme <- scale_fill_gradient2(
+    low = "black",     # Low values
+    mid = "blue4",    # Midpoint
+    high = "yellow",     # High values
+    midpoint = 40,     # Center value
+    name = "Pollock CPUE (kg/ha)",
+    limits = c(0,300))
+  
+ggplot() + geom_spatraster(data = Pollock2040Predicted) + 
+  labs(title = "2040 Predicted Pollock Weight Catch per Unit effort (kg/ha)")+ 
+  colorscheme+
+theme_bw()
 
 ```
 
@@ -443,6 +536,24 @@ gg2040 <- ggplot() + geom_spatraster(data = Pollock2040Predicted)+
 #saving image
 png("Figures/PollockMap2010_2040.png", width = 800, height = 400)
 grid.arrange(gg2010, gg2040, nrow = 1)
+dev.off()
+```
+
+```{r DIffMap}
+
+  colorscheme <- scale_fill_gradient2(
+    low = "red",     # Low values
+    mid = "white",    # Midpoint
+    high = "blue",     # High values
+    midpoint = 0,     # Center value
+    name = "Pollock CPUE (kg/ha)",
+    limits = c(-260,50))
+  
+ggChange <- ggplot() + geom_spatraster(data = Pollock2040Predicted - Pollock2010Predicted)+
+  colorscheme + labs(title = "Change in Predicted CPUE (2040 - 2010)", caption = "Catch per Unit Effort (CPUE) measured in catch of pollock (kg) per hectare trawled") +theme_bw()
+#saving image
+png("Figures/PollockMapChange.png", width = 800, height = 400)
+ggChange
 dev.off()
 ```
 
