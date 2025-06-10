@@ -501,8 +501,8 @@ gg2010 <- ggplot() + geom_spatraster(data = Pollock2010Predicted)+
 gg2040 <- ggplot() + geom_spatraster(data = PollockPred)+
   colorscheme + labs(title = paste(year, "Predicted (SSP3-7.0)")) +theme_bw()
 #saving image to folder "Figures"
-png("Figures/PollockMapSidebySide.png", width = 800, height = 400)
-grid.arrange(gg2010, gg2040, nrow = 1)
+png("Figures/PollockMapSidebySide.png", width = 600, height = 400)
+grid.arrange(gg2010, gg2040, ncol = 1)
 dev.off()
 ```
 
