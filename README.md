@@ -25,6 +25,7 @@ Previous work has shown this approach is feasible, though the exploratory model 
 # Dependencies
 - Run PackageInstall.R
   - Includes: Terra, tidyterra, caret, gridExtra, viridis, randomForest, and biooracler
+  - In the terminal use: C:\Users\*insert*\Documents\GitHub\GEOG463-563-Pollock\Working_Model>Rscript "PackageInstall.R"
 - Data folder kept within the Working_Model folder
 
 # Data Sources
