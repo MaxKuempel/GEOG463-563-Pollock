@@ -10,7 +10,83 @@ Packages used are biooracler, terra, randomForest, and caret. biooracler and ter
 
 NOTE: Rtools may be required for biooracler. Download from here: <https://cran.r-project.org/bin/windows/Rtools/>
 
-Use the PackageInstall script to install all necessary packages.
+Use the PackageInstall.R script to install all necessary packages.
+
+# PREDICTION PARAMETER SPECIFICATION 
+```{r}
+###SPECIFY ALL PARAMETERS HERE< AND THEN RUN ALL
+year_to_predict <- 2040 #Year to compare to a 2010 baseline
+pathway <- "ssp370"# climate pathway to use, options are
+#"ssp119"
+#"ssp126"
+#"ssp245"
+#"ssp370"
+#"ssp460"
+#"ssp585"
+
+
+```
+Specify Layers to use
+
+**Loading Bio- layers with bioracler**
+
+Bio-ORACLE provides 0.05 degree near global rasters (seam near the anti-meridan). There is a raster for each decade. For training the model, baseline rasters are used.
+
+All layers for a particular property can be explored with the list_layers("property") function. The specific variables for a layer (mean, min, max etc) can be explored with info_layer("layer name").
+
+In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2000 in order to download the 2000 baseline layer, and January 1st 2010 for 2010-2020.
+
+To ensure each decade downloads the same variables, all variables are defined in one place. Variables are named with a prefix describing the layer, and a suffix: possible suffixes are
+
+-   mean: Average for the decade
+
+-   max: Maximum for the decade
+
+-   min: Minimum for the decade
+
+-   range: Range of values (difference of max and min for a decade).
+
+-   ltmax: Average Highest value for a year in the decade
+
+-   ltmin: Average lowest value for a year in the decade
+
+```{r Specifying Layers and Variables}
+#layer list. use biooracler ID's and baseline time frame
+LayerList <- list(
+  SeaIce = "sithick_baseline_2000_2020_depthsurf",
+  o2 = "o2_baseline_2000_2018_depthmax",
+    BenthicTemp = "thetao_baseline_2000_2019_depthmax",
+    SeaVel = "sws_baseline_2000_2019_depthmax",
+ Chlor = "chl_baseline_2000_2018_depthsurf"
+)
+
+
+#all variables start with "sithick_" for sea ice
+SeaIceThicknessVar <- c("sithick_max")
+#all variables start with" o2_" for dissolved oxygen
+o2Var <- c("o2_range")
+#all varialbes start with "thetao_ " for temperature
+BenthicTempVar <- c("thetao_range","thetao_max","thetao_min")
+#all variables start with "sws" for current
+SeaVelVar <- c("sws_max")
+#all variables start with "chl_" for chlorophyll
+ChlorVar <- c("chl_ltmax","chl_ltmin")
+
+####################################
+#if adding a new layer, match biooracler ID(left) to variable list (right)
+#####################################
+
+#Var List
+VarList <- list(
+  SeaIceID = SeaIceThicknessVar,
+  o2ID = o2Var,
+  BenthicTempID = BenthicTempVar,
+  SeaVelID = SeaVelVar,
+  ChlorID = ChlorVar
+)
+
+```
+Beyond this point, code should run automatically based on parameters above. 
 
 Load all required packages
 
@@ -60,43 +136,6 @@ hist(x2010Survey$wtcpue,main= "Log transformed catches (2010-2020)")
 remove(survey.points.data)
 ```
 
-**Loading Bio- layers with bioracler**
-
-Bio-ORACLE provides 0.05 degree near global rasters (seam near the anti-meridan). There is a raster for each decade. For training the model, baseline rasters are used.
-
-All layers for a particular property can be explored with the list_layers("property") function. The specific variables for a layer (mean, min, max etc) can be explored with info_layer("layer name").
-
-In order to download layers from bioracler, a set of constraints is defined. Lat and Long values are taken from the extent of the NOAA Survey Trawls as to not download extra data. date is set to January 1st 2000 in order to download the 2000 baseline layer, and January 1st 2010 for 2010-2020.
-
-To ensure each decade downloads the same variables, all variables are defined in one place. Variables are named with a prefix describing the layer, and a suffix: possible suffixes are
-
--   mean: Average for the decade
-
--   max: Maximum for the decade
-
--   min: Minimum for the decade
-
--   range: Range of values (difference of max and min for a decade).
-
--   ltmax: Average Highest value for a year in the decade
-
--   ltmin: Average lowest value for a year in the decade
-
-```{r Specifying Variables}
-#all variables start with "sithick_"
-SeaIceThicknessVar <- c("sithick_max")
-#all variables start with" o2_"
-o2Var <- c("o2_range")
-#all varialbes start with "thetao_ "
-BenthicTempVar <- c("thetao_range","thetao_max","thetao_min")
-#all variables start with "sws"
-SeaVelVar <- c("sws_max")
-#all variables start with "chl_"
-ChlorVar <- c("chl_ltmax","chl_ltmin")
-
-
-```
-
 ```{r DefiningTrainingConstraints}
 #Training constraints bound in all 2000-2020 trawl data
 latitude_train = c(52, 64) 
@@ -104,25 +143,6 @@ longitude_train = c(-157, -179.975)
 ```
 
 ```{r Download Function}
-#layer list
-LayerList <- list(
-  SeaIce = "sithick_baseline_2000_2020_depthsurf",
-  o2 = "o2_baseline_2000_2018_depthmax",
-    BenthicTemp = "thetao_baseline_2000_2019_depthmax",
-    SeaVel = "sws_baseline_2000_2019_depthmax",
- Chlor = "chl_baseline_2000_2018_depthsurf"
-)
-
-#Var List
-VarList <- list(
-  SeaIceID = SeaIceThicknessVar,
-  o2ID = o2Var,
-  BenthicTempID = BenthicTempVar,
-  SeaVelID = SeaVelVar,
-  ChlorID = ChlorVar
-)
-
-
 
 biooracle_download <- function(layer, variables, year,  lat, long) {
   time = c(paste0(year, '-01-01T00:00:00Z'),
@@ -199,7 +219,6 @@ MultipleData2000 <- lapply(RastList2000, y = Coord2000,
                            FUN = terra::extract) %>%
                     as.data.frame()%>% mutate(wtcpue = x2000Survey$wtcpue)
   
-
 RastList2010 <- lapply(LayerNames2010,FUN = get)
 MultipleData2010 <- lapply(RastList2010, y = Coord2010, 
                            FUN = terra::extract) %>%
@@ -211,19 +230,8 @@ DepthData <- rbind(terra::extract(Depth, Coord2000),
 TrainingData <- rbind(MultipleData2000,MultipleData2010)
 TrainingData$depth <- DepthData$bathymetry_mean
 
-#Rename columns. Otherwise all column names are preceded with MultipleData. Nicer to read. 
-#names(TrainingData)[names(TrainingData) == "MultipleData.thetao_max"] <- "thetao_max"
-#names(TrainingData)[names(TrainingData) == "MultipleData.sithick_max"] <- "sithick_max"
-#names(TrainingData)[names(TrainingData) == "MultipleData.o2_mean"] <- "o2_mean"
-#names(TrainingData)[names(TrainingData) == "MultipleData.sws_max"] <- "current_max"
-#names(TrainingData)[names(TrainingData) == "MultipleData.bathymetry_mean"] <- "depth"
-#names(TrainingData)[names(TrainingData) == "MultipleData.x2010Survey.wtcpue"] <- "wtcpue"
-#names(TrainingData)[names(TrainingData) == "MultipleData.chl_ltmax"] <- "chl_ltmax"
-
 #Displays the first few rows of the data. 
 head(TrainingData)
-
-
 
 #mutate aggregation of training data
 library(tidyverse)
@@ -281,7 +289,10 @@ rf <- train(meanwtcpue~. ,
                    )
 
 #Creates a plot of squared error versus number of trees. 
+png(paste("Figures/ErrorVsTrees.png"), width = 600, height = 400)
 plot(rf$finalModel, main = "Error vs. Trees for Random Forest Model")
+dev.off()
+
 print(rf)
 print(rf$finalModel)
 
@@ -296,7 +307,11 @@ coeficient <- round(coeficient, digits = 3)
 #plot predicted versus actual values for the whole training data set. 
 #add the coeficient of observed values below the chart
 
-plot(exp(predict(rf, test)), exp(test$meanwtcpue), 
+
+#save plot
+png(paste("Figures/PredVObserved.png"), width = 800, height = 400)
+
+PredVObserved <- plot(exp(predict(rf, test)), exp(test$meanwtcpue), 
      main = "Predicted versus Observed CPUE (2000-2020)", 
      xlab = "Predicted", 
      ylab = "Observed ", 
@@ -304,15 +319,21 @@ plot(exp(predict(rf, test)), exp(test$meanwtcpue),
      col = "darkcyan",
      pch = 19)
 abline(lmod)
+dev.off()
 
 #Log Transformed
-plot((predict(rf, test)), (test$meanwtcpue), 
+
+#saving plot for paper
+png(paste("Figures/LogTransformedPredVObserved.png"), width = 600, height = 400)
+
+LogTransformedPredVObserved <- plot((predict(rf, test)), (test$meanwtcpue), 
      main = "Log Predicted versus Log Observed CPUE (2000-2020)", 
      xlab = "Predicted (log transformed)", 
      ylab = "Observed (log transformed)", 
      sub = paste("Slope of coeficient:", as.character(coeficient),  "(p < 0.05)"),
      pch = 19)
 abline(lmod)
+dev.off()
 
 #feature importance
  
@@ -321,6 +342,7 @@ randomForest::varImpPlot(
   main = "Feature Importance"
 )
 ```
+###creating 2010 baseline with model
 
 ```{r 2010 Prediction}
 
@@ -387,13 +409,13 @@ ggplot() + geom_spatraster(data = Pollock2010Predicted) +
   colorscheme+
 theme_bw()
 ```
-
+##Model Prediction
 Using the random forest model and 2040 conditions predicted under SSP3-7.0 (A likely climate pathway with some degree of emissions reduction), the above process is repeated. The study range is expanded to include the whole Bering sea. Due to International Date Line dividing the study area and the way that Bio-ORACLE downloads layers, an entire strip of the world is downloaded from 45 to 75 degrees latitude. Bio-ORACLE data has a strip of missing information of 0.5 degrees along the anti-meridian. This makes the movement of the highest quality zones of the fishery hard to visualize.
 
 To better visualize this data for the report, the final raster is exported as a GeoTIFF to be reprojected in ArcGIS Pro.
 
 ```{r SelectClimatePathway}
-pathway <- "ssp370"
+
 LayerListPred <- #text manipulate layer names to be future pathway IDs
   lapply(LayerList, pattern = "baseline",replacement = pathway, FUN = sub) %>%
   lapply(LayerList, pattern = "2000_2018", 
@@ -405,10 +427,10 @@ LayerListPred <- #text manipulate layer names to be future pathway IDs
 LayerListPred
 
 ```
+### Predicted layer
 
 ```{r PollockPrediction}
 
-year <- 2040
 latitude_pred <- c(52, 64)
 longitude_pred <- c(-179.975, 179.975)
 LayerNamesPred <- c()
@@ -417,15 +439,15 @@ LayerNamesPred <- c()
 for (i in 1:length(LayerList)) {
  layer = biooracle_download(LayerListPred[[i]], 
                      VarList[[i]], 
-                     year, 
+                     year_to_predict, 
                      latitude_pred, 
                      longitude_pred)
-  assign(paste0(names(LayerListPred[i]),as.character(year),
+  assign(paste0(names(LayerListPred[i]),as.character(year_to_predict),
                 "_pred"), layer )
   remove(layer) #gets rid of last duplicate layer
   LayerNamesPred <-
     append(LayerNamesPred, 
-           paste0(names(LayerList[i]),as.character(year),"_pred"))
+           paste0(names(LayerList[i]),as.character(year_to_predict),"_pred"))
   }
 #depth
 Depth_pred <- biooracle_download("terrain_characteristics",
@@ -446,7 +468,7 @@ RegionDataPred <- lapply(lapply(LayerNamesPred, FUN = get),
 
 #Creates copy of Bio-ORACLE raster then overwrites data with model predictions
 #Assigns a new object to one of the Bio-ORACLE layers. Ensures that all spatial information is maintained. 
-PollockPred <- get(paste0(names(LayerListPred[1]),as.character(year),
+PollockPred <- get(paste0(names(LayerListPred[1]),as.character(year_to_predict),
                           "_pred"))
 
 #un-log transform data
@@ -466,11 +488,13 @@ PollockPred <-crop(PollockPred , e)
     midpoint = 40,     # Center value
     name = "Pollock CPUE (kg/ha)",
     limits = c(0,300))
-  
+
+png(paste0("Figures/PollockMap",year_to_predict, ".png"), width = 600, height = 400)    
 ggplot() + geom_spatraster(data = PollockPred) + 
-  labs(title = paste(as.character(year), "Predicted Pollock Weight Catch per Unit effort (kg/ha)"))+ 
+  labs(title = paste(as.character(year_to_predict), "Predicted Pollock Weight Catch per Unit effort (kg/ha)"))+ 
   colorscheme+
 theme_bw()
+dev.off()
 ```
 
 Saving the final 2040 Prediction layer. Change saveraster to true and input your desired filename followed by .tif. Writes as a geotiff file to your default save location. Default is false to prevent unwanted downloading of files.
@@ -478,14 +502,17 @@ Saving the final 2040 Prediction layer. Change saveraster to true and input your
 ```{r Saving 2040 Layer}
 rastername <- file.path(
   paste0("TIF_outputs/Pollock",
-         as.character(year),
+         as.character(year_to_predict),
+         "(",
+         pathway,
+         ")",
          "Predicted.tif")) 
 
 writeRaster(PollockPred,filename = rastername, overwrite = TRUE) #writes a new raster
 
 ```
 
-Plotting side by side maps of 2010 and 2040 catches. Saves as a png in the figures folder.
+### Plotting side by side maps of 2010 and 2040 catches. Saves as a png in the figures folder.
 
 ```{r}
   colorscheme <- scale_fill_gradient2(
@@ -499,13 +526,14 @@ Plotting side by side maps of 2010 and 2040 catches. Saves as a png in the figur
 gg2010 <- ggplot() + geom_spatraster(data = Pollock2010Predicted)+
   colorscheme + labs(title = "2010 Baseline conditons") + theme_bw()
 gg2040 <- ggplot() + geom_spatraster(data = PollockPred)+
-  colorscheme + labs(title = paste(year, "Predicted (SSP3-7.0)")) +theme_bw()
+  colorscheme + labs(title = paste(year_to_predict, "Pathway", pathway)) +theme_bw()
 #saving image to folder "Figures"
-png("Figures/PollockMapSidebySide.png", width = 600, height = 400)
+png(paste0("Figures/PollockMapSidebySide(",year_to_predict,", ",pathway,").png"), 
+    width = 600, height = 400)
 grid.arrange(gg2010, gg2040, ncol = 1)
 dev.off()
 ```
-
+### Subtracting predicted layer from baseline
 ```{r DIffMap}
 Change <- PollockPred - Pollock2010Predicted
 MeanChange <- mean(na.omit(values(Change)))%>%
@@ -520,10 +548,13 @@ MeanChange <- mean(na.omit(values(Change)))%>%
     limits = c(-260,50))
   
 ggChange <- ggplot() + geom_spatraster(data = Change)+
-  colorscheme + labs(title = paste("Change in Predicted CPUE", year,"- 2010)"), caption = "Catch per Unit Effort (CPUE) measured in catch of pollock (kg) per hectare trawled",
+  colorscheme + labs(title = paste("Change in Predicted CPUE",pathway
+                                   ,year,"- 2010)"), 
+                     caption = "Catch per Unit Effort (CPUE) measured in catch of pollock (kg) per hectare trawled",
                      subtitle = paste("Mean change:",MeanChange, "kg/ha")) +theme_bw()
 #saving image
-png(paste("Figures/PollockMap",year,"-2010.png"), width = 800, height = 400)
+png(paste("Figures/PollockMap",pathway,year_to_predict,"-2010.png"), 
+    width = 800, height = 400)
 ggChange
 dev.off()
 ```
