@@ -4,9 +4,6 @@ Repository for work and code for GEOG463/563 project on pollock modeling and imp
 # Issue
 The walleye pollock (*Gadus chalcogrammus*, previously *Theraga Chalcogramma*) fishery is critical to the economy of the Bering Sea. Pollock brought in $525 million dollars in revenue in the Eastern Bering Sea alone 2023 (NOAA Fisheries). Temperature is a limiting factor to them, and sea ice algal blooms provide them food. With changing ocean conditions, the regions of best pollock fishing may move. Because of the Russian and US EEZ's meeting in the region, any movement of pollock affects access to this productive fishery. 
 
-# Stakeholders
-This project is aimed at policy makers and fisheries managers providing insights into proper management practices and realistic expectations of pollock fishing dynamics in the coming decades. We aim to build a robust, descriptive model that most accurately represents current pollock conditions which will provide crucial predictions to our stakeholders.
-
 # Methods and objectives
 By looking at how ocean conditions affect pollock currently, we hope to predict how the fishery will be distributed under future ocean condtions. 
 
@@ -22,8 +19,13 @@ Previous work has shown this approach is feasible, though the exploratory model 
 # Folders and Structure
 - Archive: Contains old models and the Jupyter based model made by Pedro Henrique Batista de Barros (removed with public repo, as this is active research)
 - Sources: Papers, Books and RIS files used for modeling and whitepaper
-- Supplemental_code: R markdown for figure generation. Used to make maps for whitepaper and other uses as needed
+- Supplementary_code: R markdown for figure generation. Used to make maps for whitepaper and other uses as needed
 - **Working_Model: The actual model in use. Contains datasets needed as well. All analysis conducted here**
+
+# Dependencies
+- Run PackageInstall.R
+  - Includes: Terra, tidyterra, caret, gridExtra, viridis, randomForest, and biooracler
+- Data folder kept within the Working_Model folder
 
 # Data Sources
 - NOAA DisMAP: https://apps-st.fisheries.noaa.gov/dismap/DisMAP.html
