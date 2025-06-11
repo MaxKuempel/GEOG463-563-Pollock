@@ -12,7 +12,8 @@ NOTE: Rtools may be required for biooracler. Download from here: <https://cran.r
 
 Use the PackageInstall.R script to install all necessary packages.
 
-# PREDICTION PARAMETER SPECIFICATION 
+# PREDICTION PARAMETER SPECIFICATION
+
 ```{r}
 ###SPECIFY ALL PARAMETERS HERE< AND THEN RUN ALL
 year_to_predict <- 2040 #Year to compare to a 2010 baseline
@@ -26,6 +27,7 @@ pathway <- "ssp370"# climate pathway to use, options are
 
 
 ```
+
 Specify Layers to use
 
 **Loading Bio- layers with bioracler**
@@ -86,7 +88,8 @@ VarList <- list(
 )
 
 ```
-Beyond this point, code should run automatically based on parameters above. 
+
+Beyond this point, code should run automatically based on parameters above.
 
 Load all required packages
 
@@ -107,9 +110,9 @@ library(viridis)
 
 **Reading and processing the pollock trawl surveys**
 
-The trawl surveys come in a .csv file named "survey-points-data.csv." It contains the HaulID, Stratum, lat and long of the trawl, depth of trawl, year of trawl and weight catch per unit effort (kg/ha). HaulID allows matching of this data with a greater metadata file containing the exact start and end coorinates of the trawl path, net properties and more.
+The trawl surveys come in a .csv file named "survey-points-data.csv." It contains the HaulID, Stratum, lat and long of the trawl, depth of trawl, year of trawl and weight catch per unit effort (kg/ha). HaulID allows matching of this data with a greater metadata file containing the exact start and end coordinates of the trawl path, net properties and more.
 
-First it is read into the R environment with the read.csv function. Data for 2000-2010 and 2010-2020 are loaded in seperately (as to match coresponding decadal Bio-ORACLE layers.)
+First it is read into the R environment with the read.csv function. Data for 2000-2010 and 2010-2020 are loaded in separately (as to match corresponding decadal Bio-ORACLE layers.)
 
 Weight catch per unit effort (kg of fish per hectare trawled, shortened to wtcpue) values above 0 are selected and log transformed.
 
@@ -203,7 +206,11 @@ Depth <- biooracle_download("terrain_characteristics",
                    longitude_train)
 ```
 
-In order to train a model, Ocean condtions must be matched to wtcpue values through matched latitudes and longitudes. The extract function allows for this. By extracing a vector of all data point coordiantes we can extract Bio-ORACLE raster values at each coordinate and combine into a dataframe for that decade,called MultipleData[start of decade]. For training the model, a version of MultipleData is made with all variable except the lattitudes and longitudes, with both decades included. This is so that the model does not take these into account. Survey trawls are made roughly at the same points but are slightly off year to year. To aggregate the trawl data temporily to the same time scale of the rasters, dplyr is used to group points in multipled data based off of properties and the mean wtcpue is calcualted for points in the same cell. The unique() function is then used to remove duplicate points (will interfere with model training).
+In order to train a model, Ocean conditions must be matched to wtcpue values through matched latitudes and longitudes. The extract function allows for this. By extracting a vector of all data point coordinates we can extract Bio-ORACLE raster values at each coordinate and combine into a data frame for that decade,called MultipleData[start of decade]. For training the model, a version of MultipleData is made with all variable except the latitudes and longitudes, with both decades included. This is so that the model does not take these into account. Survey trawls are made roughly at the same points but are slightly off year to year. To aggregate the trawl data temporarily to the same time scale of the rasters, dplyr is used to group points in multiples data based off of properties and the mean wtcpue is calculated for points in the same cell.
+
+NOTE: this operates off the assumption that two separate cells in bio-ORACLE will not share all properties, due to high decimal precision this is extremely unlikely. Looking for an alternative to this or pairwise distance calculation is an area of active improvement .
+
+The unique() function is then used to remove duplicate points (will interfere with model training).
 
 ```{r Extracing and Combining data}
 #Creates a new matrix of the lattitudes and longitudes of every trawl
@@ -260,7 +267,7 @@ remove(list = c("x2000Survey", "x2010Survey", "Coord2000","Coord2010"))
 
 **Creating the Random Forest Model**
 
-The model is created in the randomForest package. It is trained off of 70% of the data and tested on the other 30% (randomly assigned). For repeatability, a set seed of 222 is used.
+The model is created in the randomForest package. It is trained off of 70% of the data and tested on the other 30% (randomly assigned). For repeat ability, a set seed of 222 is used.
 
 ```{r}
 
@@ -336,13 +343,15 @@ abline(lmod)
 dev.off()
 
 #feature importance
- 
+png("Figures/FeatureImportance.png", width = 600, height = 400)
 randomForest::varImpPlot(
   rf$finalModel,
   main = "Feature Importance"
 )
+dev.off
 ```
-###creating 2010 baseline with model
+
+### Creating 2010 baseline with model
 
 ```{r 2010 Prediction}
 
@@ -384,15 +393,15 @@ RegionData2010 <- lapply(lapply(LayerNames2010_pred, FUN = get),
 
 #Creates copy of Bio-ORACLE raster then overwrites data with model predictions
 #Assigns a new object to one of the Bio-ORACLE layers. Ensures that all spatial information is maintained. 
-Pollock2010Predicted <- o22010_pred
+Pollock2010_pred <- o22010_pred
 
 #un-log transform data
-values(Pollock2010Predicted)[!is.na(values(Pollock2010Predicted))] <- 
+values(Pollock2010_pred)[!is.na(values(Pollock2010_pred))] <- 
   exp(predict(rf$finalModel, newdata = na.omit(RegionData2010)))
 
-Pollock2010Predicted <- terra::rotate(Pollock2010Predicted)
+Pollock2010_pred <- terra::rotate(Pollock2010_pred)
 e <- ext(-200, -150, 52, 64)
-Pollock2010Predicted <-crop(Pollock2010Predicted , e)
+Pollock2010_pred <-crop(Pollock2010_pred , e)
 #Plot the whole prediction map
 
 
@@ -404,19 +413,24 @@ Pollock2010Predicted <-crop(Pollock2010Predicted , e)
     name = "Pollock CPUE (kg/ha)",
     limits = c(0,300))
   
-ggplot() + geom_spatraster(data = Pollock2010Predicted) + 
+#save interpolated map   
+png("Figures/PollockMap(2010).png")
+ggplot() + geom_spatraster(data = Pollock2010_pred) + 
   labs(title = "2010 Predicted Pollock Weight Catch per Unit effort (kg/ha)")+ 
   colorscheme+
 theme_bw()
+dev.off()
 ```
-##Model Prediction
+
+## Model Prediction
+
 Using the random forest model and 2040 conditions predicted under SSP3-7.0 (A likely climate pathway with some degree of emissions reduction), the above process is repeated. The study range is expanded to include the whole Bering sea. Due to International Date Line dividing the study area and the way that Bio-ORACLE downloads layers, an entire strip of the world is downloaded from 45 to 75 degrees latitude. Bio-ORACLE data has a strip of missing information of 0.5 degrees along the anti-meridian. This makes the movement of the highest quality zones of the fishery hard to visualize.
 
-To better visualize this data for the report, the final raster is exported as a GeoTIFF to be reprojected in ArcGIS Pro.
+To better visualize this data for the report, the final raster is exported as a GeoTIFF to be re-projected in ArcGISPro.
 
 ```{r SelectClimatePathway}
 
-LayerListPred <- #text manipulate layer names to be future pathway IDs
+LayerList_pred <- #text manipulate layer names to be future pathway IDs
   lapply(LayerList, pattern = "baseline",replacement = pathway, FUN = sub) %>%
   lapply(LayerList, pattern = "2000_2018", 
          replacement = "2020_2100", FUN = gsub)%>%
@@ -424,29 +438,30 @@ LayerListPred <- #text manipulate layer names to be future pathway IDs
          replacement = "2020_2100", FUN = gsub)%>%
   lapply(LayerList, pattern = "2000_2020", 
          replacement = "2020_2100", FUN = gsub)
-LayerListPred
+LayerList_pred
 
 ```
+
 ### Predicted layer
 
 ```{r PollockPrediction}
 
 latitude_pred <- c(52, 64)
 longitude_pred <- c(-179.975, 179.975)
-LayerNamesPred <- c()
+LayerNames_pred <- c()
 #uses lat bounded by bering sea, and lon for a global swath
 #allows rewrapping around antimeridian
 for (i in 1:length(LayerList)) {
- layer = biooracle_download(LayerListPred[[i]], 
+ layer = biooracle_download(LayerList_pred[[i]], 
                      VarList[[i]], 
                      year_to_predict, 
                      latitude_pred, 
                      longitude_pred)
-  assign(paste0(names(LayerListPred[i]),as.character(year_to_predict),
+  assign(paste0(names(LayerList[i]),as.character(year_to_predict),
                 "_pred"), layer )
   remove(layer) #gets rid of last duplicate layer
-  LayerNamesPred <-
-    append(LayerNamesPred, 
+  LayerNames_pred <-
+    append(LayerNames_pred, 
            paste0(names(LayerList[i]),as.character(year_to_predict),"_pred"))
   }
 #depth
@@ -458,8 +473,8 @@ Depth_pred <- biooracle_download("terrain_characteristics",
 ####################
 
 #Create a new data frame for all the properties used in the model
-LayerNamesPred <- append(LayerNamesPred, "Depth_pred")
-RegionDataPred <- lapply(lapply(LayerNamesPred, FUN = get),
+LayerNames_pred <- append(LayerNames_pred, "Depth_pred")
+RegionData_pred <- lapply(lapply(LayerNames_pred, FUN = get),
                          FUN = terra::values)%>%data.frame()%>%
   mutate(depth = bathymetry_mean)%>%mutate(bathymetry_mean = NULL)
 
@@ -468,16 +483,16 @@ RegionDataPred <- lapply(lapply(LayerNamesPred, FUN = get),
 
 #Creates copy of Bio-ORACLE raster then overwrites data with model predictions
 #Assigns a new object to one of the Bio-ORACLE layers. Ensures that all spatial information is maintained. 
-PollockPred <- get(paste0(names(LayerListPred[1]),as.character(year_to_predict),
+Pollock_pred <- get(paste0(names(LayerList_pred[1]),as.character(year_to_predict),
                           "_pred"))
 
 #un-log transform data
-values(PollockPred)[!is.na(values(PollockPred))] <- 
-  exp(predict(rf$finalModel, newdata = na.omit(RegionDataPred)))
+values(Pollock_pred)[!is.na(values(Pollock_pred))] <- 
+  exp(predict(rf$finalModel, newdata = na.omit(RegionData_pred)))
 
-PollockPred <- terra::rotate(PollockPred)
+Pollock_pred <- terra::rotate(Pollock_pred)
 e <- ext(-200, -150, 52, 64)
-PollockPred <-crop(PollockPred , e)
+Pollock_pred <-crop(Pollock_pred , e)
 #Plot the whole prediction map
 
 
@@ -489,15 +504,16 @@ PollockPred <-crop(PollockPred , e)
     name = "Pollock CPUE (kg/ha)",
     limits = c(0,300))
 
-png(paste0("Figures/PollockMap",year_to_predict, ".png"), width = 600, height = 400)    
-ggplot() + geom_spatraster(data = PollockPred) + 
+png(paste0("Figures/PollockMap(",year_to_predict,", ",pathway, ").png"), 
+    width = 600, height = 400)    
+ggplot() + geom_spatraster(data = Pollock_pred) + 
   labs(title = paste(as.character(year_to_predict), "Predicted Pollock Weight Catch per Unit effort (kg/ha)"))+ 
   colorscheme+
 theme_bw()
 dev.off()
 ```
 
-Saving the final 2040 Prediction layer. Change saveraster to true and input your desired filename followed by .tif. Writes as a geotiff file to your default save location. Default is false to prevent unwanted downloading of files.
+Saving the final prediction layer, outputs to TIF_outputs.
 
 ```{r Saving 2040 Layer}
 rastername <- file.path(
@@ -508,11 +524,11 @@ rastername <- file.path(
          ")",
          "Predicted.tif")) 
 
-writeRaster(PollockPred,filename = rastername, overwrite = TRUE) #writes a new raster
+writeRaster(Pollock_pred,filename = rastername, overwrite = TRUE) #writes a new raster
 
 ```
 
-### Plotting side by side maps of 2010 and 2040 catches. Saves as a png in the figures folder.
+### Plotting side by side maps of 2010 and future CPUE. Saves as a png in the figures folder.
 
 ```{r}
   colorscheme <- scale_fill_gradient2(
@@ -523,9 +539,9 @@ writeRaster(PollockPred,filename = rastername, overwrite = TRUE) #writes a new r
     name = "Pollock CPUE (kg/ha)",
     limits = c(0,300))
   
-gg2010 <- ggplot() + geom_spatraster(data = Pollock2010Predicted)+
+gg2010 <- ggplot() + geom_spatraster(data = Pollock2010_pred)+
   colorscheme + labs(title = "2010 Baseline conditons") + theme_bw()
-gg2040 <- ggplot() + geom_spatraster(data = PollockPred)+
+gg2040 <- ggplot() + geom_spatraster(data = Pollock_pred)+
   colorscheme + labs(title = paste(year_to_predict, "Pathway", pathway)) +theme_bw()
 #saving image to folder "Figures"
 png(paste0("Figures/PollockMapSidebySide(",year_to_predict,", ",pathway,").png"), 
@@ -533,9 +549,13 @@ png(paste0("Figures/PollockMapSidebySide(",year_to_predict,", ",pathway,").png")
 grid.arrange(gg2010, gg2040, ncol = 1)
 dev.off()
 ```
+
 ### Subtracting predicted layer from baseline
+
+Known offset issue here, where predicted layer is not aligned with baseline.
+
 ```{r DIffMap}
-Change <- PollockPred - Pollock2010Predicted
+Change <- Pollock_pred - Pollock2010_pred
 MeanChange <- mean(na.omit(values(Change)))%>%
   round(3) #round to reasonable amount of sig figs
 
